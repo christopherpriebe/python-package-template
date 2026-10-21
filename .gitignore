@@ -1,0 +1,6 @@
+.nox/
+__pycache__/
+.DS_Store
+CLAUDE.local.md
+.claude/settings.local.json
+.ruff_cache/

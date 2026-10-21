@@ -1,0 +1,27 @@
+---
+paths:
+  - "pyproject.toml"
+  - "uv.lock"
+{%- if use_rust %}
+  - "Cargo.toml"
+  - "Cargo.lock"
+  - "crates/**/Cargo.toml"
+{%- endif %}
+---
+
+# Dependencies
+
+- Adding a runtime dependency is a design decision: say why the standard
+  library doesn't cover it, and prefer a library that is typed, maintained,
+  and small.
+- Python: `uv add name` for runtime, `uv add --group dev name` (or `test`,
+  `docs`, `lint`, `typecheck`) for tooling. Never edit `uv.lock` by hand;
+  run `uv lock` after editing `pyproject.toml` directly. Pin floors
+  (`>=1.2`), not exact versions.
+- Every dependency must import under the minimum supported Python
+  ({{ python_min }}).
+{%- if use_rust %}
+- Rust: `cargo add name` in the crate that needs it. Shared versions go in
+  `[workspace.dependencies]`; crates reference them with
+  `name.workspace = true`. Never edit `Cargo.lock` by hand.
+{%- endif %}

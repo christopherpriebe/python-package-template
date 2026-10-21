@@ -1,0 +1,42 @@
+//! Python bindings for {{ project_name }}, exposed as `{{ package_name }}._core`.
+//!
+//! Keep logic in the `{{ crate_name }}` crate. This crate only converts types and
+//! maps errors to Python exceptions. Keep `src/{{ package_name }}/_core.pyi` in
+//! sync with the functions exported here.
+
+// Doc comments here are Python docstrings, not rustdoc, so Python names such as
+// `OverflowError` are written without backticks.
+#![allow(clippy::doc_markdown)]
+
+/// The `{{ package_name }}._core` extension module.
+#[pyo3::pymodule]
+mod _core {
+    use pyo3::exceptions::{PyOverflowError, PyRuntimeError};
+    use pyo3::prelude::*;
+
+    use {{ crate_name | replace('-', '_') }}::Error;
+
+    fn to_py_err(err: Error) -> PyErr {
+        match err {
+            Error::Overflow => PyOverflowError::new_err(err.to_string()),
+            _ => PyRuntimeError::new_err(err.to_string()),
+        }
+    }
+
+    // Google-style docstrings, read by Sphinx through autodoc and napoleon.
+    /// Add two 64-bit signed integers.
+    ///
+    /// Args:
+    ///     left (int): The first operand.
+    ///     right (int): The second operand.
+    ///
+    /// Returns:
+    ///     int: The sum of ``left`` and ``right``.
+    ///
+    /// Raises:
+    ///     OverflowError: If an operand or the result does not fit in 64 bits.
+    #[pyfunction]
+    fn add(left: i64, right: i64) -> PyResult<i64> {
+        {{ crate_name | replace('-', '_') }}::add(left, right).map_err(to_py_err)
+    }
+}

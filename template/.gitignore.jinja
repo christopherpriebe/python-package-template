@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+build/
+*.egg-info/
+{%- if use_rust %}
+*.so
+*.pyd
+*.dylib
+{%- endif %}
+
+# Tools
+.nox/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Docs
+docs/_build/
+{%- if use_rust %}
+
+# Rust
+target/
+{%- endif %}
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+
+# Claude Code personal overrides
+CLAUDE.local.md
+.claude/settings.local.json

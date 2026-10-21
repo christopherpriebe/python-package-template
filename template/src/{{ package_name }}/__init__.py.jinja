@@ -1,0 +1,9 @@
+"""{{ description or project_name }}."""
+
+from importlib.metadata import version
+
+from {{ package_name }}._core import add
+
+__all__ = ["__version__", "add"]
+
+__version__ = version("{{ project_slug }}")

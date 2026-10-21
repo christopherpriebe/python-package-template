@@ -1,0 +1,24 @@
+[package]
+name = "{{ crate_name }}-py"
+description = "Python bindings for {{ project_name }}."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+{%- if license != "Proprietary" %}
+license.workspace = true
+{%- endif %}
+{%- if github_owner %}
+repository.workspace = true
+{%- endif %}
+publish.workspace = true
+
+[lib]
+name = "_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+{{ crate_name }}.workspace = true
+pyo3.workspace = true
+
+[lints]
+workspace = true

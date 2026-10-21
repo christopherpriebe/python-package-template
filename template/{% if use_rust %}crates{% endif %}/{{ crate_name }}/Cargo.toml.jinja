@@ -1,0 +1,18 @@
+[package]
+name = "{{ crate_name }}"
+description = "Core Rust library for {{ project_name }}."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+{%- if license != "Proprietary" %}
+license.workspace = true
+{%- endif %}
+{%- if github_owner %}
+repository.workspace = true
+{%- endif %}
+publish.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

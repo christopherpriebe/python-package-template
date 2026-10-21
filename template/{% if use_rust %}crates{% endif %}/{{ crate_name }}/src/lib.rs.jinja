@@ -1,0 +1,48 @@
+//! Core Rust library for {{ project_name }}.
+//!
+//! This crate has no Python dependencies. The `{{ crate_name }}-py` crate wraps it
+//! for Python.
+
+use std::fmt;
+
+/// Errors returned by this crate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Error {
+    /// The result of an arithmetic operation does not fit in the output type.
+    Overflow,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Overflow => f.write_str("integer overflow"),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+/// Adds two signed 64-bit integers.
+///
+/// # Errors
+///
+/// Returns [`Error::Overflow`] if the sum does not fit in an `i64`.
+pub fn add(left: i64, right: i64) -> Result<i64, Error> {
+    left.checked_add(right).ok_or(Error::Overflow)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Error, add};
+
+    #[test]
+    fn add_returns_sum() {
+        assert_eq!(add(2, 3), Ok(5));
+    }
+
+    #[test]
+    fn add_reports_overflow() {
+        assert_eq!(add(i64::MAX, 1), Err(Error::Overflow));
+    }
+}

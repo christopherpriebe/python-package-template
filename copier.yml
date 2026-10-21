@@ -1,0 +1,100 @@
+_min_copier_version: "9.4"
+_subdirectory: template
+_answers_file: .copier-answers.yml
+_message_after_copy: |
+  Created {{ project_name }} in {{ _copier_conf.dst_path }}.
+
+  Next steps:
+    cd {{ _copier_conf.dst_path }}
+    git init && git add -A
+    uv sync                  # creates .venv{% if use_rust %} and builds the Rust extension{% endif %}
+    uv run pre-commit install
+    uv run nox               # lint, typecheck, tests + coverage{% if use_rust %}, rust{% endif %}, docs
+
+# ---------------------------------------------------------------- project
+project_name:
+  type: str
+  help: Human-readable project name
+  validator: "{% if not project_name.strip() %}Required{% endif %}"
+
+project_slug:
+  type: str
+  help: Distribution name on PyPI (lowercase, dashes)
+  default: "{{ project_name.strip() | lower | replace(' ', '-') | replace('_', '-') }}"
+  validator: >-
+    {% if not (project_slug | regex_search('^[a-z][a-z0-9]*(-[a-z0-9]+)*$')) %}
+    Use lowercase letters, digits and single dashes, starting with a letter
+    {% endif %}
+
+package_name:
+  type: str
+  help: Import name of the Python package
+  default: "{{ project_slug | replace('-', '_') }}"
+  validator: >-
+    {% if not (package_name | regex_search('^[a-z][a-z0-9_]*$')) %}
+    Use lowercase letters, digits and underscores, starting with a letter
+    {% endif %}
+
+description:
+  type: str
+  help: One-line description
+  default: ""
+
+author_name:
+  type: str
+  help: Author name
+  validator: "{% if not author_name.strip() %}Required{% endif %}"
+
+author_email:
+  type: str
+  help: Author email
+  validator: "{% if not author_email.strip() %}Required{% endif %}"
+
+github_owner:
+  type: str
+  help: GitHub user or organization that will host the repo (blank to skip URLs)
+  default: ""
+
+license:
+  type: str
+  help: License
+  default: MIT
+  choices:
+    - MIT
+    - BSD-3-Clause
+    - Proprietary
+
+copyright_year:
+  type: str
+  help: Copyright year
+  default: "{{ '%Y' | strftime }}"
+
+# ---------------------------------------------------------------- python
+python_min:
+  type: str
+  help: Minimum supported Python version
+  default: "3.11"
+  choices: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+
+# Newest Python the project is tested against. Bump this in the template
+# when a new CPython release comes out.
+python_max:
+  type: str
+  default: "3.15"
+  when: false
+
+# ---------------------------------------------------------------- rust
+use_rust:
+  type: bool
+  help: Include Rust bindings (Cargo workspace with a core crate and a PyO3 crate, built with maturin)?
+  default: false
+
+crate_name:
+  type: str
+  help: Name of the pure-Rust core crate
+  default: "{{ project_slug }}"
+  when: "{{ use_rust }}"
+  validator: >-
+    {% if use_rust and not (crate_name | regex_search('^[a-z][a-z0-9]*([-_][a-z0-9]+)*$')) %}
+    Use lowercase letters, digits, dashes or underscores
+    {% endif %}

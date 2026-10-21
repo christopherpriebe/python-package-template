@@ -1,0 +1,18 @@
+import pytest
+
+from {{ package_name }} import add
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [(1, 2, 3), (-5, 5, 0), (0, 0, 0)],
+)
+def test_add_returns_sum(left: int, right: int, expected: int) -> None:
+    assert add(left, right) == expected
+{%- if use_rust %}
+
+
+def test_add_raises_on_i64_overflow() -> None:
+    with pytest.raises(OverflowError, match="overflow"):
+        add(2**63 - 1, 1)
+{%- endif %}

@@ -1,0 +1,66 @@
+# {{ project_name }}
+
+{{ (description or "A typed Python package").rstrip(".") }}. A src-layout
+Python package for Python >= {{ python_min }}, managed by uv.{% if use_rust %} The core is
+Rust: `crates/{{ crate_name }}` is the library and `crates/{{ crate_name }}-py`
+binds it as `{{ package_name }}._core`.{% endif %}
+
+## Commands
+
+Everything runs through uv. Never `pip`; never activate the venv by hand.
+
+    uv sync  # environment and editable install{% if use_rust %}; builds the extension{% endif %}
+    uv run nox  # the full gate
+    uv run nox -s lint typecheck tests-{{ python_min }}  # fast gate
+    uv run nox -s tests-{{ python_min }} -- -k name  # one Python; pytest args after --
+    uv run pytest tests/test_x.py -n0 -x  # quick serial loop
+    uv add name  # or: uv add --group test name; never edit uv.lock
+{%- if use_rust %}
+    cargo check --workspace --all-targets  # after every Rust edit
+{%- endif %}
+
+## Definition of done
+
+- `uv run nox` passes. For docs-only or trivial changes `uv run nox -s lint typecheck` is enough; say which ran.
+- New behavior has a test that fails without it. Coverage stays at or above 90%.
+- Suppressions (`# noqa`, `# ty: ignore[...]`{% if use_rust %}, `#[expect]`{% endif %}) carry a reason on the line and appear in your summary. `# type: ignore` is never used; the checker ignores it.
+- No new dependency without saying why.
+- No commit or push unless asked. Commits use Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`; imperative subject under 72 characters; body says why) and the user's own git identity: no `Co-Authored-By` trailer, no AI attribution, never `--author`.
+
+## Tests are the contract
+
+Never weaken, skip, xfail, or delete a test to get green. If a test looks
+wrong or impossible to satisfy as written, stop and report it: which test,
+what is wrong, what you would change. In this session, ask the user. In a
+subagent, put it under a "Blocked" heading. Reporting is the expected path.
+
+## Models
+
+Subagents and skills always name a model. Never inherit the session model,
+and never use `fable` unless the user asks for it by name.
+
+| Tier | Use for | Not for |
+| --- | --- | --- |
+| `opus` | planning, interface and test design, review, triage, anything ambiguous, talking to the user | mechanical edits |
+| `sonnet` | implementation against a plan or failing tests, refactors with a written plan, multi-file mechanical edits, lint and type fixes | design decisions, editing tests |
+| `haiku` | read-only search, extraction, summarizing files, running a command and reporting | anything that edits |
+
+Agents in `.claude/agents/`: `scout` (haiku, read-only), `implementer`
+(sonnet, never touches `tests/`), `reviewer` (opus, read-only). Brief them
+with the plan, the files, and the applicable rule; require a report of what
+changed, what didn't, and every decision the brief didn't cover.
+
+## Rules and workflows
+
+`.claude/rules/` loads per path: `python.md`, `tests.md`,
+`dependencies.md`{% if use_rust %}, `rust.md`{% endif %}. Skills: `/plan`
+(interface, behaviors to test, open questions; agreed in conversation),
+`/feature` (tests by this session,
+implementation by `implementer`, review by `reviewer`, full gate),
+`/fix-gate`, `/release`. `.claude/workflows/feature.js` is the hands-off
+variant of `/feature`; use it deliberately, not by default.
+
+## Hooks
+
+Every edited file is formatted. Ending a turn with uncommitted changes runs
+ruff, ty, and pytest; failures come back instead of ending the turn.

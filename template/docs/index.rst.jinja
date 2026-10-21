@@ -1,0 +1,27 @@
+{{ project_name }}
+{{ '=' * project_name | length }}
+
+{{ description or project_name }}
+
+Installation
+------------
+
+.. code-block:: console
+
+   pip install {{ project_slug }}
+
+Quick start
+-----------
+
+.. code-block:: python
+
+   from {{ package_name }} import add
+
+   add(1, 2)
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents
+
+   api
+   development

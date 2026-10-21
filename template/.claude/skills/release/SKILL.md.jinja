@@ -1,0 +1,28 @@
+---
+name: release
+description: Cut a release. Bumps the version, runs the full gate, commits, tags{% if license != "Proprietary" %}, and pushes the tag so the release workflow publishes to PyPI{% endif %}. User-invoked only.
+argument-hint: major | minor | patch
+disable-model-invocation: true
+---
+
+Release bump: $ARGUMENTS
+
+1. Preconditions: `git status` is clean, the current branch is the default
+   branch, and `$ARGUMENTS` is one of `major`, `minor`, `patch`. Stop
+   otherwise.
+2. Gate first: `uv run nox`. Nothing is released from a failing tree.
+3. Bump: `uv run nox -s bump -- $ARGUMENTS`.{% if use_rust %} This also updates
+   the Cargo workspace version and `Cargo.lock`.{% endif %} Show the diff and
+   the new version from `uv version --short`.
+4. Commit and tag:
+
+       git commit -am "Release v$(uv version --short)"
+       git tag "v$(uv version --short)"
+{% if license != "Proprietary" %}
+5. Confirm with the user, then `git push --follow-tags`. The tag runs
+   `.github/workflows/release.yml`, which checks that the tag matches the
+   project version and publishes with trusted publishing.
+{%- else %}
+5. Stop here. This project is proprietary: there is no release workflow and
+   no publish step. Pushing is the user's call.
+{%- endif %}

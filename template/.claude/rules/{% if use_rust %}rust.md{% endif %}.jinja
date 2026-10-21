@@ -1,0 +1,38 @@
+---
+paths:
+  - "crates/**"
+  - "Cargo.toml"
+  - "src/{{ package_name }}/_core.pyi"
+---
+
+# Rust conventions
+
+The `[workspace.lints]` table and `cargo clippy -- --deny=warnings` in the
+nox `rust` session own the mechanical rules: pedantic clippy; `unwrap_used`,
+`expect_used`, `panic`, and `todo` as warnings; `unsafe_code` denied. This
+file lists only what differs from defaults or is specific to this layout.
+
+- `crates/{{ crate_name }}` is the library: no `pyo3`, testable with
+  `cargo test`. `crates/{{ crate_name }}-py` is the binding: argument
+  conversion and error mapping only, no logic. Its `///` comments are Python
+  docstrings in Google style.
+- Every function exported from the binding has a matching signature in
+  `src/{{ package_name }}/_core.pyi`. Change them together. The binding is
+  tested through pytest, not `cargo test`.
+- Lint overrides are `#[expect(lint, reason = "...")]`, never `#[allow]`.
+  An `expect("...")` is allowed only for an invariant documented on the
+  same line.
+- Errors: one `#[non_exhaustive]` enum per crate derived with `thiserror`;
+  lowercase messages without a trailing period.
+- Private by default; widen visibility one step at a time for a real
+  caller. Fields stay private; public enums are `#[non_exhaustive]`.
+- Spell words out in your own identifiers (`configuration`, `index`) except
+  ecosystem conventions (`len`, `iter`, `fmt`).
+- Don't fix borrow-checker errors with `.clone()`, `Rc<RefCell<_>>`, or
+  `Arc<Mutex<_>>` unless you decided the ownership model on purpose and say
+  so in a comment.
+- Verify third-party APIs against the version in `Cargo.lock` before using
+  them; guessed method names are the most common failure in agent-written
+  Rust.
+- Run `cargo check --workspace --all-targets` after every edit. `uv sync`
+  rebuilds the extension after changes under `crates/`.

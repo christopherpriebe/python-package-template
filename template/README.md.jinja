@@ -1,0 +1,78 @@
+# {{ project_name }}
+
+{{ description }}
+
+## Installation
+
+```console
+pip install {{ project_slug }}
+```
+
+## Usage
+
+```python
+from {{ package_name }} import add
+
+add(1, 2)
+```
+
+## Development
+
+Requires [uv](https://docs.astral.sh/uv/){% if use_rust %} and a Rust toolchain ([rustup](https://rustup.rs/) picks up `rust-toolchain.toml`){% endif %}.
+
+```console
+uv sync                    # create .venv and install the package in editable mode
+uv run pre-commit install  # install the git hooks
+uv run nox                 # run every check
+```
+
+| Session | What it does |
+| --- | --- |
+| `lint` | `ruff format --check` and `ruff check` |
+| `typecheck` | `ty check` against every supported Python version |
+| `tests` | pytest with pytest-xdist and coverage on Python {{ python_min }}–{{ python_max }} |
+| `coverage` | combines coverage, writes `htmlcov/`, fails under the threshold |
+{%- if use_rust %}
+| `rust` | `cargo fmt --check`, `clippy`, `cargo doc`, `cargo test` |
+{%- endif %}
+| `docs` | Sphinx build with warnings as errors |
+| `build` | `uv build` into `dist/` |
+| `bump` | `nox -s bump -- major\|minor\|patch` |
+
+Pass arguments through to pytest with `uv run nox -s tests-{{ python_min }} -- -k name`.
+
+### Working with Claude Code
+
+`CLAUDE.md` is the entry point: commands, the definition of done, and how work
+is delegated across model tiers. `.claude/` holds the rules that load per file
+type, the subagents, the skills (`/plan`, `/feature`, `/fix-gate`, `/release`),
+the hooks, and the permission allowlist. All of it is committed, so every
+contributor's agent behaves the same. Personal overrides go in
+`CLAUDE.local.md` and `.claude/settings.local.json`, both gitignored.
+{%- if use_rust %}
+
+### Layout
+
+```text
+crates/{{ crate_name }}/      pure Rust library, no Python dependency
+crates/{{ crate_name }}-py/   PyO3 bindings, built as {{ package_name }}._core
+src/{{ package_name }}/       Python package; _core.pyi types the extension
+```
+
+`uv sync` and `uv run` rebuild the extension whenever a file under `crates/`
+changes.
+{%- endif %}
+{%- if license != "Proprietary" %}
+
+## Releasing
+
+```console
+uv run nox -s bump -- minor
+git commit -am "Release v$(uv version --short)"
+git tag "v$(uv version --short)"
+git push --follow-tags
+```
+
+Pushing the tag runs `.github/workflows/release.yml`, which publishes to PyPI
+through trusted publishing.
+{%- endif %}
