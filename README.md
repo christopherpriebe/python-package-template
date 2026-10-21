@@ -32,11 +32,15 @@ to include Rust. Then:
 
 ```console
 cd my-project
-git init && git add -A
+git init
 uv sync
 uv run pre-commit install
+git add -A
 uv run nox
 ```
+
+`uv sync` runs before `git add` so the lock files are part of the first
+commit; the release workflow builds with `--locked`.
 
 To skip retyping your name and email every time, put defaults in Copier's
 settings file (`~/.config/copier/settings.yml` on Linux,
@@ -74,8 +78,8 @@ Copier merges template changes with your edits and leaves conflicts marked.
 │   ├── rules/              # python, tests, dependencies, rust (Rust variant)
 │   ├── agents/             # scout, implementer, reviewer
 │   ├── skills/             # plan, feature, fix-gate, release, marathon
-│   ├── hooks/              # format_file, stop_gate, statusline, usage_guard, marathon_driver
-│   └── workflows/          # feature.js
+│   ├── hooks/              # format, stop gate, status line, usage guard, role guard, marathon driver
+│   └── workflows/          # feature-workflow.js
 ├── src/<package>/
 │   ├── __init__.py
 │   ├── _core.py            # pure Python variant
@@ -139,7 +143,8 @@ active run moving. Personal overrides go in
 - Bump `python_max` in `copier.yml` when a new CPython is released.
 - Bump tool floors in `template/pyproject.toml.jinja` and action versions in
   the release workflow as needed.
-- Run `uvx nox` here to render both variants and run their full checks.
+- Run `uvx nox` here to render the pure, Rust, and Proprietary variants and
+  run their full checks.
 - The agent setup under `template/.claude/` reaches every project on
   `copier update`; keep it general, and grow rules from recurring failures
   rather than speculation.

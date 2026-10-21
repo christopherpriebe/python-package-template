@@ -6,7 +6,7 @@
 
 // Doc comments here are Python docstrings, not rustdoc, so Python names such as
 // `OverflowError` are written without backticks.
-#![allow(clippy::doc_markdown)]
+#![expect(clippy::doc_markdown, reason = "doc comments are Python docstrings")]
 
 /// The `{{ package_name }}._core` extension module.
 #[pyo3::pymodule]

@@ -25,14 +25,21 @@ ANSWERS = {
 }
 
 
+VARIANTS = {
+    "pure": {"use_rust": "false"},
+    "rust": {"use_rust": "true"},
+    "proprietary": {"use_rust": "true", "license": "Proprietary"},
+}
+
+
 @nox.session
-@nox.parametrize("variant", ["pure", "rust"])
+@nox.parametrize("variant", list(VARIANTS))
 def generated(session: nox.Session, variant: str) -> None:
     """Render the template and run the generated project's nox sessions."""
     dest = Path(session.create_tmp()) / variant
     shutil.rmtree(dest, ignore_errors=True)
 
-    data = {**ANSWERS, "use_rust": str(variant == "rust").lower()}
+    data = {**ANSWERS, **VARIANTS[variant]}
     session.run(
         "uvx",
         "copier",

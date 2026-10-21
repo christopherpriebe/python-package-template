@@ -29,13 +29,15 @@ is Jinja source that Copier renders into a new project.
 The self-test renders from `HEAD`, so the repo needs at least one commit;
 uncommitted changes are included. To inspect a render by hand:
 
-    uvx copier copy --defaults --vcs-ref=HEAD --data use_rust=true . /tmp/render
+    uvx copier copy --defaults --vcs-ref=HEAD --data project_name=Check \
+      --data author_name=A --data author_email=a@example.com \
+      --data use_rust=true . /tmp/render
 
 ## Conventions
 
-- Render-time logic is limited to `use_rust`, `license`, and `github_owner`.
-  Taste preferences are not Copier questions; they are edited in the
-  generated files.
+- Render-time logic is limited to `use_rust`, `license`, `github_owner`,
+  `python_min`, and `crate_name`. Taste preferences are not Copier
+  questions; they are edited in the generated files.
 - GitHub Actions `${{ }}` expressions need `{% raw %}` blocks.
 - Tool version floors live in `template/pyproject.toml.jinja` and
   `template/.pre-commit-config.yaml.jinja`, action versions in the release

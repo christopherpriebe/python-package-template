@@ -6,9 +6,10 @@ _message_after_copy: |
 
   Next steps:
     cd {{ _copier_conf.dst_path }}
-    git init && git add -A
-    uv sync                  # creates .venv{% if use_rust %} and builds the Rust extension{% endif %}
+    git init
+    uv sync                  # creates .venv and the lock file{% if use_rust %}, builds the Rust extension{% endif %}
     uv run pre-commit install
+    git add -A
     uv run nox               # lint, typecheck, tests + coverage{% if use_rust %}, rust{% endif %}, docs
 
 # ---------------------------------------------------------------- project

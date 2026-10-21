@@ -16,7 +16,6 @@
       "Bash(uv run coverage *)",
       "Bash(uv run pre-commit *)",
       "Bash(uv run sphinx-build *)",
-      "Bash(uv run python *)",
 {%- if use_rust %}
       "Bash(cargo check *)",
       "Bash(cargo build *)",
@@ -48,14 +47,16 @@
       "Bash(pip3 *)",
       "Bash(python -m pip *)",
       "Bash(python3 -m pip *)",
+      "Bash(uv pip *)",
       "Bash(poetry *)",
-      "Read(./.env)",
-      "Read(./.env.*)"
+      "Read(**/.env)",
+      "Read(**/.env.*)"
     ]
   },
   "statusLine": {
     "type": "command",
-    "command": "uv run --frozen python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/statusline.py\""
+    "command": "uv run --quiet --no-project --python \">=3.11\" python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/statusline.py\" || exit 1",
+    "refreshInterval": 60
   },
   "hooks": {
     "PreToolUse": [
@@ -63,7 +64,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --frozen python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/usage_guard.py\"",
+            "command": "uv run --quiet --no-project --python \">=3.11\" python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/usage_guard.py\" || exit 1",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --quiet --no-project --python \">=3.11\" python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/role_guard.py\" || exit 1",
             "timeout": 10
           }
         ]
@@ -75,7 +86,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --frozen python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/format_file.py\"",
+            "command": "uv run --quiet --no-project --python \">=3.11\" python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/format_file.py\" || exit 1",
             "timeout": 60
           }
         ]
@@ -86,12 +97,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --frozen python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/stop_gate.py\"",
-            "timeout": 180
+            "command": "uv run --quiet --no-project --python \">=3.11\" python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/stop_gate.py\" || exit 1",
+            "timeout": 300
           },
           {
             "type": "command",
-            "command": "uv run --frozen python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/marathon_driver.py\"",
+            "command": "uv run --quiet --no-project --python \">=3.11\" python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/marathon_driver.py\" || exit 1",
             "timeout": 10
           }
         ]

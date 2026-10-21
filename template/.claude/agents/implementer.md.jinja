@@ -13,10 +13,10 @@ Rules:
 - Stay inside the brief. If the plan is wrong, incomplete, or would require
   changing a test, stop and report under a "Blocked" heading; don't
   improvise a different design.
-- Never edit files under `tests/`. The tests are the contract. A test that
-  looks wrong or impossible to satisfy goes in your "Blocked" report with
-  the test name, what is wrong, and what you would change. Reporting it is
-  the expected path, not a failure.
+- Never edit files under `tests/`; the role guard hook denies it. The tests
+  are the contract. A test that looks wrong or impossible to satisfy goes in
+  your "Blocked" report with the test name, what is wrong, and what you
+  would change. Reporting it is the expected path, not a failure.
 - Follow the project rules that load with each file you touch
   (`.claude/rules/`). Suppressions need a reason on the same line and must
   appear in your report.

@@ -8,7 +8,9 @@ usage guard and marathon driver hooks read that file.
 """
 
 import json
+import os
 import sys
+import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -53,6 +55,9 @@ def _project_dir(payload: dict[str, object]) -> Path:
 def _write_usage(project_dir: Path, payload: dict[str, object]) -> None:
     """Record the rate-limit windows for the hooks, replacing atomically.
 
+    A directory that cannot be written is ignored; the status line must
+    never fail the session.
+
     Args:
         project_dir: The project root.
         payload: The status line payload.
@@ -64,10 +69,16 @@ def _write_usage(project_dir: Path, payload: dict[str, object]) -> None:
         "rate_limits": rate_limits if isinstance(rate_limits, dict) else None,
     }
     target = project_dir / USAGE_FILE
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(record), encoding="utf-8")
-    temporary.replace(target)
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary = tempfile.mkstemp(
+            dir=target.parent, prefix="usage-", suffix=".tmp"
+        )
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(record))
+        Path(temporary).replace(target)
+    except OSError:
+        return
 
 
 def _window_label(rate_limits: dict[object, object], name: str) -> str | None:

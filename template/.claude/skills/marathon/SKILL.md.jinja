@@ -37,9 +37,10 @@ Repeat until every step is checked:
    starting a step.
 2. Do the next unchecked step. Use `/feature` for anything that needs
    tests; delegate per the model table in `CLAUDE.md`.
-3. Run `uv run nox`. Commit as `feat(<slug>): <step>` under the user's
-   identity. Mark the step `[x]` with the short commit hash and rewrite
-   `## Next`.
+3. Run `uv run nox`. Commit under the user's identity with the
+   Conventional Commits type that fits the step (`feat`, `fix`, `refactor`,
+   `test`, `docs`, `chore`) and the scope `<slug>`. Mark the step `[x]` with
+   the short commit hash and rewrite `## Next`.
 4. Don't end the turn between steps.
 
 ## Pausing

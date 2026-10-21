@@ -3,25 +3,14 @@
 //! This crate has no Python dependencies. The `{{ crate_name }}-py` crate wraps it
 //! for Python.
 
-use std::fmt;
-
 /// Errors returned by this crate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
     /// The result of an arithmetic operation does not fit in the output type.
+    #[error("integer overflow")]
     Overflow,
 }
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Overflow => f.write_str("integer overflow"),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
 
 /// Adds two signed 64-bit integers.
 ///

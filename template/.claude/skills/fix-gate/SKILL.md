@@ -3,6 +3,7 @@ name: fix-gate
 description: Run the fast checks (ruff format, ruff check, ty) and fix exactly what they report, mechanically, without changing behavior. Use when the Stop gate or pre-commit fails, or after a large edit.
 model: sonnet
 effort: low
+context: fork
 ---
 
 Run in order and fix what each reports before moving on:

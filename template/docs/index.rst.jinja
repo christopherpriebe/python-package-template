@@ -5,10 +5,19 @@
 
 Installation
 ------------
+{%- if license == "Proprietary" %}
+
+This package is not published. Add it from a checkout:
 
 .. code-block:: console
 
-   pip install {{ project_slug }}
+   uv add --editable path/to/{{ project_slug }}
+{%- else %}
+
+.. code-block:: console
+
+   uv add {{ project_slug }}
+{%- endif %}
 
 Quick start
 -----------

@@ -5,9 +5,12 @@ Claude Code runs this as a ``PreToolUse`` hook for every tool. It reads the
 checks the 5-hour and weekly windows. At the warn threshold it attaches a
 notice, at most once every few minutes, telling Claude to reach a checkpoint
 and not start another step. At the stop threshold it denies every tool call
-except what a checkpoint needs: reads, ``git status/diff/log/show/add/commit``,
-edits to the run ledger under ``.claude/runs/``, and scheduling the resume.
-Sessions without usage data, such as API-key sessions, pass through.
+except what a checkpoint needs: reads, ``git status/diff/log/show/add/commit``
+(plus ``stash`` and ``restore`` to shelve broken work), edits to the run
+ledger under ``.claude/runs/``, task-list and scheduling tools, and loading
+tool schemas. A reading is trusted until its window resets, since usage within
+a window only rises. Sessions without usage data, such as API-key sessions,
+pass through. The script always exits 0; decisions travel as JSON.
 
 Thresholds come from ``CLAUDE_USAGE_WARN_PERCENT`` and
 ``CLAUDE_USAGE_STOP_PERCENT`` when set.
@@ -16,23 +19,42 @@ Thresholds come from ``CLAUDE_USAGE_WARN_PERCENT`` and
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-STALE_SECONDS = 15 * 60
 NOTICE_INTERVAL_SECONDS = 5 * 60
 USAGE_FILE = Path(".claude", "usage.json")
 NOTICE_FILE = Path(".claude", "usage-notice")
 LEDGER_DIR = Path(".claude", "runs")
 WINDOWS = (("five_hour", "5-hour"), ("seven_day", "weekly"))
 CHECKPOINT_TOOLS = frozenset(
-    {"Read", "Glob", "Grep", "CronCreate", "CronList", "AskUserQuestion"}
+    {
+        "Read",
+        "Glob",
+        "Grep",
+        "ToolSearch",
+        "AskUserQuestion",
+        "CronCreate",
+        "CronList",
+        "CronDelete",
+        "ScheduleWakeup",
+        "TodoWrite",
+        "TaskCreate",
+        "TaskUpdate",
+        "TaskList",
+        "TaskGet",
+    }
 )
-CHECKPOINT_COMMAND = re.compile(r"^\s*git\s+(status|diff|log|show|add|commit)\b")
-COMMAND_SEPARATOR = re.compile(r"&&|\|\||;|\n")
+CHECKPOINT_TOOL_PREFIXES = ("mcp__ccd_turn__",)
+CHECKPOINT_COMMAND = re.compile(
+    r"^\s*git\s+(status|diff|log|show|add|commit|stash|restore)\b"
+)
+COMMAND_SEPARATOR = re.compile(r"&&|;|\n")
+FORBIDDEN = re.compile(r"[|&$`<>]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,12 +105,27 @@ def _project_dir(payload: dict[str, object]) -> Path:
         payload: The hook payload.
 
     Returns:
-        ``CLAUDE_PROJECT_DIR`` when set, otherwise the payload's ``cwd``.
+        ``CLAUDE_PROJECT_DIR`` when set, else the git top level of the
+        payload's ``cwd``, else the nearest ancestor holding ``.claude/``,
+        else that ``cwd``.
     """
     env_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
     if env_dir:
         return Path(env_dir)
-    return Path(str(payload.get("cwd", ".")))
+    cwd = Path(str(payload.get("cwd", ".")))
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        return Path(result.stdout.strip())
+    for candidate in (cwd, *cwd.resolve().parents):
+        if (candidate / ".claude").is_dir():
+            return candidate
+    return cwd
 
 
 def read_windows(project_dir: Path) -> list[Reading]:
@@ -99,8 +136,8 @@ def read_windows(project_dir: Path) -> list[Reading]:
 
     Returns:
         The windows with a numeric percentage and a reset time in the
-        future, or an empty list when the record is missing, stale, or has
-        no rate-limit data.
+        future, or an empty list when the record is missing or has no
+        rate-limit data.
     """
     try:
         record: object = json.loads(
@@ -111,9 +148,6 @@ def read_windows(project_dir: Path) -> list[Reading]:
     if not isinstance(record, dict):
         return []
     now = time.time()
-    written_at = record.get("written_at")
-    if not isinstance(written_at, int | float) or now - written_at > STALE_SECONDS:
-        return []
     rate_limits = record.get("rate_limits")
     if not isinstance(rate_limits, dict):
         return []
@@ -150,19 +184,23 @@ def describe(reading: Reading) -> str:
 
 
 def _is_checkpoint_command(command: object) -> bool:
-    """Report whether every segment of a shell command is a checkpoint git call.
+    """Report whether a shell command only performs checkpoint git calls.
 
     Args:
         command: The ``command`` field of a Bash tool call.
 
     Returns:
-        ``True`` when each ``&&``, ``||``, ``;`` or newline-separated segment
-        is ``git status``, ``diff``, ``log``, ``show``, ``add``, or ``commit``.
+        ``True`` when each ``&&``, ``;`` or newline-separated segment is a
+        checkpoint git subcommand and the command uses no pipes,
+        redirection, substitution, or backgrounding.
     """
     if not isinstance(command, str):
         return False
     segments = [part for part in COMMAND_SEPARATOR.split(command) if part.strip()]
-    return bool(segments) and all(CHECKPOINT_COMMAND.match(part) for part in segments)
+    return bool(segments) and all(
+        CHECKPOINT_COMMAND.match(part) and not FORBIDDEN.search(part)
+        for part in segments
+    )
 
 
 def _is_ledger_edit(file_path: object, project_dir: Path) -> bool:
@@ -190,10 +228,12 @@ def _is_checkpoint_action(payload: dict[str, object], project_dir: Path) -> bool
 
     Returns:
         ``True`` for reads, checkpoint git commands, edits to the run
-        ledger, and scheduling tools.
+        ledger, task-list tools, scheduling tools, and schema loading.
     """
     tool_name = payload.get("tool_name")
     if tool_name in CHECKPOINT_TOOLS:
+        return True
+    if isinstance(tool_name, str) and tool_name.startswith(CHECKPOINT_TOOL_PREFIXES):
         return True
     tool_input = payload.get("tool_input")
     if not isinstance(tool_input, dict):
@@ -222,8 +262,11 @@ def _notice_due(project_dir: Path) -> bool:
         last = 0.0
     if now - last < NOTICE_INTERVAL_SECONDS:
         return False
-    marker.parent.mkdir(parents=True, exist_ok=True)
-    marker.write_text(str(now), encoding="utf-8")
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(str(now), encoding="utf-8")
+    except OSError:
+        return True
     return True
 
 
@@ -268,10 +311,12 @@ def main() -> int:
                 "permissionDecision": "deny",
                 "permissionDecisionReason": (
                     f"Usage guard: {describe(worst)}. Do not start new work. Reach a checkpoint: "
-                    "commit what passes, set the run ledger under .claude/runs/ to paused with the "
-                    "reset time, schedule a one-shot resume with CronCreate a few minutes after the "
-                    "reset, tell the user, and end the turn. Allowed until then: Read, Grep, Glob, "
-                    "git status/diff/log/show/add/commit, edits under .claude/runs/, CronCreate."
+                    "commit what passes (or `git stash` what doesn't), set the run ledger under "
+                    ".claude/runs/ to paused with the reset time, schedule a one-shot resume with "
+                    "CronCreate a few minutes after the reset, tell the user, and end the turn. "
+                    "Allowed until then: Read, Grep, Glob, ToolSearch, "
+                    "git status/diff/log/show/add/commit/stash/restore, edits under .claude/runs/, "
+                    "CronCreate, and the task list."
                 ),
             }
         )

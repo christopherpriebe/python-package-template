@@ -6,23 +6,40 @@ unchecked steps, the hook blocks the stop and names the next step, so a long
 run keeps going without a human prompt. It nudges only when the run has
 progressed since the previous nudge, so a stuck run ends the turn instead of
 looping, and it stays quiet while the ledger is paused or done or while the
-usage record is at or past the warn threshold.
+usage record is at or past the warn threshold. The script always exits 0;
+the block decision travels as JSON.
 """
 
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
 
-STALE_SECONDS = 15 * 60
 USAGE_FILE = Path(".claude", "usage.json")
 LEDGER_DIR = Path(".claude", "runs")
-NUDGE_BLOCKED = 2
-STATUS = re.compile(r"^status:\s*(\w+)", re.MULTILINE)
-FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
+WINDOWS = ("five_hour", "seven_day")
+STATUS = re.compile(r"""^status:\s*["']?(\w+)["']?\s*$""", re.MULTILINE)
+FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
 STEP = re.compile(r"^\s*(?:[-*]|\d+[.)])\s+\[([ xX])\]\s*(.+?)\s*$", re.MULTILINE)
+
+
+def _threshold(name: str, default: float) -> float:
+    """Read a percentage threshold from the environment.
+
+    Args:
+        name: The environment variable.
+        default: The value when the variable is unset or not a number.
+
+    Returns:
+        The threshold as a percentage.
+    """
+    try:
+        return float(os.environ.get(name, default))
+    except ValueError:
+        return default
 
 
 def _payload() -> dict[str, object]:
@@ -48,22 +65,37 @@ def _project_dir(payload: dict[str, object]) -> Path:
         payload: The hook payload.
 
     Returns:
-        ``CLAUDE_PROJECT_DIR`` when set, otherwise the payload's ``cwd``.
+        ``CLAUDE_PROJECT_DIR`` when set, else the git top level of the
+        payload's ``cwd``, else the nearest ancestor holding ``.claude/``,
+        else that ``cwd``.
     """
     env_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
     if env_dir:
         return Path(env_dir)
-    return Path(str(payload.get("cwd", ".")))
+    cwd = Path(str(payload.get("cwd", ".")))
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        return Path(result.stdout.strip())
+    for candidate in (cwd, *cwd.resolve().parents):
+        if (candidate / ".claude").is_dir():
+            return candidate
+    return cwd
 
 
 def _usage_percent(project_dir: Path) -> float:
-    """Return the highest percentage among usage windows still counting.
+    """Return the highest percentage among the usage windows still counting.
 
     Args:
         project_dir: The project root holding ``.claude/usage.json``.
 
     Returns:
-        The percentage, or ``0.0`` when no fresh usage data exists.
+        The percentage, or ``0.0`` when no usage data exists.
     """
     try:
         record: object = json.loads(
@@ -74,14 +106,12 @@ def _usage_percent(project_dir: Path) -> float:
     if not isinstance(record, dict):
         return 0.0
     now = time.time()
-    written_at = record.get("written_at")
-    if not isinstance(written_at, int | float) or now - written_at > STALE_SECONDS:
-        return 0.0
     rate_limits = record.get("rate_limits")
     if not isinstance(rate_limits, dict):
         return 0.0
     worst = 0.0
-    for window in rate_limits.values():
+    for name in WINDOWS:
+        window = rate_limits.get(name)
         if not isinstance(window, dict):
             continue
         used = window.get("used_percentage")
@@ -134,7 +164,10 @@ def _nudge_is_new(ledger: Path, completed: int) -> bool:
         previous = int(marker.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         previous = -1
-    marker.write_text(str(completed), encoding="utf-8")
+    try:
+        marker.write_text(str(completed), encoding="utf-8")
+    except OSError:
+        return False
     return completed > previous
 
 
@@ -142,12 +175,9 @@ def main() -> int:
     """Block the stop while an active run has steps left and is progressing.
 
     Returns:
-        ``0`` to let the turn end, ``2`` to send Claude to the next step.
+        Always ``0``; a block decision travels as JSON on stdout.
     """
-    try:
-        warn_percent = float(os.environ.get("CLAUDE_USAGE_WARN_PERCENT", "80"))
-    except ValueError:
-        warn_percent = 80.0
+    warn_percent = _threshold("CLAUDE_USAGE_WARN_PERCENT", 80.0)
     payload = _payload()
     project_dir = _project_dir(payload)
     ledger = _active_ledger(project_dir)
@@ -155,21 +185,33 @@ def main() -> int:
         return 0
     steps = STEP.findall(ledger.read_text(encoding="utf-8"))
     completed = sum(1 for mark, _ in steps if mark != " ")
-    remaining = [text for mark, text in steps if mark == " "]
-    if not remaining:
+    pending = [
+        (number, text)
+        for number, (mark, text) in enumerate(steps, start=1)
+        if mark == " "
+    ]
+    if not pending:
         return 0
     if _usage_percent(project_dir) >= warn_percent:
         return 0
     if not _nudge_is_new(ledger, completed):
         return 0
-    sys.stderr.write(
-        f"Marathon '{ledger.stem}': {completed} of {len(steps)} steps done and the run is "
-        f"active. Continue with step {completed + 1}: {remaining[0]}\n"
-        "Finish it, run the gate, commit, check it off in the ledger, and keep going. "
-        "If you must stop (usage warning, blocked, or the user asked), set `status: paused` "
-        "in the ledger first so this hook stays quiet.\n"
+    number, text = pending[0]
+    sys.stdout.write(
+        json.dumps(
+            {
+                "decision": "block",
+                "reason": (
+                    f"Marathon '{ledger.stem}': {completed} of {len(steps)} steps done and the run "
+                    f"is active. Continue with step {number}: {text}\n"
+                    "Finish it, run the gate, commit, check it off in the ledger, and keep going. "
+                    "If you must stop (usage warning, blocked, or the user asked), set "
+                    "`status: paused` in the ledger first so this hook stays quiet."
+                ),
+            }
+        )
     )
-    return NUDGE_BLOCKED
+    return 0
 
 
 if __name__ == "__main__":

@@ -36,8 +36,9 @@ subagent, put it under a "Blocked" heading. Reporting is the expected path.
 
 ## Models
 
-Subagents and skills always name a model. Never inherit the session model,
-and never use `fable` unless the user asks for it by name.
+Subagents always name a model. `/fix-gate` forks onto sonnet; `/plan` moves
+this session to opus for its turn; the other skills run on this session's
+model. Never use `fable` unless the user asks for it by name.
 
 | Tier | Use for | Not for |
 | --- | --- | --- |
@@ -57,8 +58,9 @@ changed, what didn't, and every decision the brief didn't cover.
 (interface, behaviors to test, open questions; agreed in conversation),
 `/feature` (tests by this session,
 implementation by `implementer`, review by `reviewer`, full gate),
-`/fix-gate`, `/release`, `/marathon`. `.claude/workflows/feature.js` is the
-hands-off variant of `/feature`; use it deliberately, not by default.
+`/fix-gate`, `/release`, `/marathon`. `/feature-workflow` (the script in
+`.claude/workflows/`) is the hands-off variant of `/feature`; use it
+deliberately, not by default.
 
 ## Long runs
 
@@ -74,5 +76,9 @@ schedule a one-shot resume with CronCreate, tell the user, end the turn.
 ## Hooks
 
 Every edited file is formatted. Ending a turn with uncommitted changes runs
-ruff, ty, and pytest; failures come back instead of ending the turn. The
-usage guard and the marathon driver are described under Long runs.
+ruff, ty, and pytest (plus `cargo check` and a rebuild when there is a
+`Cargo.toml`); failures come back instead of ending the turn, except that
+the same failures twice in a row let it end. A role guard denies the
+implementer edits under `tests/` and limits the reviewer's shell to
+inspection. The usage guard and the marathon driver are described under
+Long runs.

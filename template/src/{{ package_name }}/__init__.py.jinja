@@ -1,4 +1,4 @@
-"""{{ description or project_name }}."""
+"""{{ (description or project_name) | trim | replace('"""', "'''") | regex_replace('[."]+$', '') }}."""
 
 from importlib.metadata import version
 

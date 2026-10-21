@@ -1,6 +1,6 @@
 [package]
 name = "{{ crate_name }}"
-description = "Core Rust library for {{ project_name }}."
+description = "Core library for {{ project_name }}"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -13,6 +13,7 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+thiserror.workspace = true
 
 [lints]
 workspace = true

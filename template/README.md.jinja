@@ -3,10 +3,19 @@
 {{ description }}
 
 ## Installation
+{%- if license == "Proprietary" %}
+
+This package is not published. Add it from a checkout:
 
 ```console
-pip install {{ project_slug }}
+uv add --editable path/to/{{ project_slug }}
 ```
+{%- else %}
+
+```console
+uv add {{ project_slug }}
+```
+{%- endif %}
 
 ## Usage
 
@@ -70,11 +79,13 @@ changes.
 
 ```console
 uv run nox -s bump -- minor
-git commit -am "Release v$(uv version --short)"
-git tag "v$(uv version --short)"
+uv run nox
+git commit -am "chore(release): v$(uv version --short)"
+git tag -a "v$(uv version --short)" -m "v$(uv version --short)"
 git push --follow-tags
 ```
 
-Pushing the tag runs `.github/workflows/release.yml`, which publishes to PyPI
+The tag is annotated because `--follow-tags` pushes only annotated tags.
+Pushing it runs `.github/workflows/release.yml`, which publishes to PyPI
 through trusted publishing.
 {%- endif %}

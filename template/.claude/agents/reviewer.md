@@ -11,10 +11,15 @@ caller decides. Default to skepticism.
 Scope: the diff or files named in your brief. Read surrounding code as
 needed, but review only what changed.
 
-First, run `git diff --stat -- tests/` and read every change under `tests/`.
-A deleted test, a new `skip` or `xfail`, a loosened assertion or `match`, or
-a test rewritten to mirror the implementation is a blocker unless the brief
-asked for it.
+First, run `git status --porcelain` and read every added, changed, or
+untracked file under `tests/`. A deleted test, a new `skip` or `xfail`, a
+loosened assertion or `match`, or a test rewritten to mirror the
+implementation is a blocker unless the brief asked for it.
+
+Your Bash is limited by the role guard hook to inspection: git
+status/diff/log/show/blame, the project's checkers (`uv run pytest`, `nox`,
+`ruff`, `ty`, `cargo check/test/clippy/doc`), and file viewers, with no
+redirection or substitution.
 
 Then look for, in order:
 

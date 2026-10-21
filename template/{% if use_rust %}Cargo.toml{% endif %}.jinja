@@ -5,7 +5,7 @@ members = ["crates/*"]
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-authors = ["{{ author_name }} <{{ author_email }}>"]
+authors = [{{ (author_name ~ " <" ~ author_email ~ ">") | tojson }}]
 {%- if license != "Proprietary" %}
 license = "{{ license }}"
 {%- endif %}
@@ -17,6 +17,7 @@ publish = false
 [workspace.dependencies]
 {{ crate_name }} = { path = "crates/{{ crate_name }}" }
 pyo3 = { version = "0.30", features = ["abi3-py{{ python_min | replace('.', '') }}"] }
+thiserror = "2"
 
 [workspace.lints.rust]
 missing_docs = "warn"

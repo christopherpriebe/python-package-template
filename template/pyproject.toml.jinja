@@ -3,9 +3,9 @@
 [project]
 name = "{{ project_slug }}"
 version = "0.1.0"
-description = "{{ description }}"
+description = {{ description | tojson }}
 readme = "README.md"
-authors = [{ name = "{{ author_name }}", email = "{{ author_email }}" }]
+authors = [{ name = {{ author_name | tojson }}, email = {{ author_email | tojson }} }]
 {%- if license != "Proprietary" %}
 license = "{{ license }}"
 license-files = ["LICENSE"]
