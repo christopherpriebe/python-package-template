@@ -53,14 +53,29 @@
       "Read(./.env.*)"
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "uv run --frozen python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/statusline.py\""
+  },
   "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --frozen python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/usage_guard.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --frozen python \"$CLAUDE_PROJECT_DIR/.claude/hooks/format_file.py\"",
+            "command": "uv run --frozen python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/format_file.py\"",
             "timeout": 60
           }
         ]
@@ -71,8 +86,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --frozen python \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop_gate.py\"",
+            "command": "uv run --frozen python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/stop_gate.py\"",
             "timeout": 180
+          },
+          {
+            "type": "command",
+            "command": "uv run --frozen python \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/.claude/hooks/marathon_driver.py\"",
+            "timeout": 10
           }
         ]
       }

@@ -16,8 +16,9 @@ with optional Rust bindings.
 - **Release workflow**: the only GitHub Actions workflow; builds and publishes to
   PyPI on a `v*` tag
 - **Claude Code setup**: a short committed `CLAUDE.md`, path-scoped rules,
-  model-tiered subagents, skills for plan/feature/fix-gate/release, a
-  format-on-edit hook, a stop-gate hook, and a permission allowlist
+  model-tiered subagents, skills for plan/feature/fix-gate/release/marathon,
+  a format-on-edit hook, a stop-gate hook, a usage-aware status line and
+  guard for multi-hour runs, and a permission allowlist
 
 ## Create a project
 
@@ -72,8 +73,8 @@ Copier merges template changes with your edits and leaves conflicts marked.
 │   ├── settings.json       # permissions and hooks
 │   ├── rules/              # python, tests, dependencies, rust (Rust variant)
 │   ├── agents/             # scout, implementer, reviewer
-│   ├── skills/             # plan, feature, fix-gate, release
-│   ├── hooks/              # format_file.py, stop_gate.py
+│   ├── skills/             # plan, feature, fix-gate, release, marathon
+│   ├── hooks/              # format_file, stop_gate, statusline, usage_guard, marathon_driver
 │   └── workflows/          # feature.js
 ├── src/<package>/
 │   ├── __init__.py
@@ -126,7 +127,11 @@ never fable unless asked). Style rules live in `.claude/rules/` and load only
 when a matching path is touched. Subagents pin a model and a tool set: the
 reviewer cannot edit, the scout can only read, the implementer never touches
 `tests/`. A defective test is reported, never edited. Hooks format every edited
-file and refuse to end a turn while ruff, ty, or the tests fail. Personal overrides go in
+file and refuse to end a turn while ruff, ty, or the tests fail. For
+multi-hour work, `/marathon` keeps a run ledger and commits a checkpoint per
+step; the status line records the subscription usage windows, a guard warns
+at 80% and allows only checkpoint actions at 92%, and a stop hook keeps an
+active run moving. Personal overrides go in
 `CLAUDE.local.md` and `.claude/settings.local.json`, both gitignored.
 
 ## Maintaining the template

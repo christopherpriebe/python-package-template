@@ -47,8 +47,10 @@ Pass arguments through to pytest with `uv run nox -s tests-{{ python_min }} -- -
 is delegated across model tiers. `.claude/` holds the rules that load per file
 type, the subagents, the skills (`/plan`, `/feature`, `/fix-gate`, `/release`),
 the hooks, and the permission allowlist. All of it is committed, so every
-contributor's agent behaves the same. Personal overrides go in
-`CLAUDE.local.md` and `.claude/settings.local.json`, both gitignored.
+contributor's agent behaves the same. `/marathon` runs a multi-hour plan
+with a commit per step and pauses when the subscription usage window nears
+its limit. Personal overrides go in `CLAUDE.local.md` and
+`.claude/settings.local.json`, both gitignored.
 {%- if use_rust %}
 
 ### Layout

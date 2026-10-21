@@ -57,10 +57,22 @@ changed, what didn't, and every decision the brief didn't cover.
 (interface, behaviors to test, open questions; agreed in conversation),
 `/feature` (tests by this session,
 implementation by `implementer`, review by `reviewer`, full gate),
-`/fix-gate`, `/release`. `.claude/workflows/feature.js` is the hands-off
-variant of `/feature`; use it deliberately, not by default.
+`/fix-gate`, `/release`, `/marathon`. `.claude/workflows/feature.js` is the
+hands-off variant of `/feature`; use it deliberately, not by default.
+
+## Long runs
+
+`/marathon` executes a multi-step plan over hours: a ledger under
+`.claude/runs/`, a committed checkpoint per step, and a pause-and-resume
+protocol tied to the subscription usage windows. The status line records the
+5-hour and weekly windows to `.claude/usage.json`; before every tool call the
+usage guard warns at 80% and, at 92%, allows only checkpoint actions; the
+marathon driver sends you back to the next step if you stop while a run is
+active. Pausing means: commit, set the ledger to paused with the reset time,
+schedule a one-shot resume with CronCreate, tell the user, end the turn.
 
 ## Hooks
 
 Every edited file is formatted. Ending a turn with uncommitted changes runs
-ruff, ty, and pytest; failures come back instead of ending the turn.
+ruff, ty, and pytest; failures come back instead of ending the turn. The
+usage guard and the marathon driver are described under Long runs.
