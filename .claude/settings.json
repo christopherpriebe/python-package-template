@@ -8,9 +8,14 @@
       "Bash(git status *)",
       "Bash(git diff *)",
       "Bash(git log *)",
-      "Bash(git show *)"
+      "Bash(git show *)",
+      "Bash(git switch *)",
+      "Bash(git branch *)",
+      "Bash(git fetch *)"
     ],
     "ask": [
+      "Bash(gh pr create *)",
+      "Bash(git merge *)",
       "Bash(git push *)",
       "Bash(git tag *)"
     ]

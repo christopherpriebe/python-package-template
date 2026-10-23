@@ -6,11 +6,12 @@ _message_after_copy: |
 
   Next steps:
     cd {{ _copier_conf.dst_path }}
-    git init
+    git init -b main
     uv sync                  # creates .venv and the lock file{% if use_rust %}, builds the Rust extension{% endif %}
     uv run pre-commit install
-    git add -A
     uv run nox               # lint, typecheck, tests + coverage{% if use_rust %}, rust{% endif %}, docs
+    git add -A && git commit -m "chore: scaffold from python-package-template"
+    git switch -c dev        # main holds releases; features branch from dev as dev-<name>
 
 # ---------------------------------------------------------------- project
 project_name:

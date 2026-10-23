@@ -32,15 +32,18 @@ to include Rust. Then:
 
 ```console
 cd my-project
-git init
+git init -b main
 uv sync
 uv run pre-commit install
-git add -A
 uv run nox
+git add -A && git commit -m "chore: scaffold from python-package-template"
+git switch -c dev
 ```
 
-`uv sync` runs before `git add` so the lock files are part of the first
-commit; the release workflow builds with `--locked`.
+`uv sync` runs before the first commit so the lock files are part of it; the
+release workflow builds with `--locked`. `main` holds releases, `dev`
+accumulates squash-merged feature pull requests, and features live on
+`dev-<name>` branches cut from `dev`.
 
 To skip retyping your name and email every time, put defaults in Copier's
 settings file (`~/.config/copier/settings.yml` on Linux,
@@ -148,6 +151,9 @@ active run moving. Personal overrides go in
 - The agent setup under `template/.claude/` reaches every project on
   `copier update`; keep it general, and grow rules from recurring failures
   rather than speculation.
+- Branches follow the same model as generated projects: `main` holds tagged
+  releases, `dev` accumulates squash-merged pull requests, and work happens
+  on `dev-<name>` branches cut from `dev`.
 
 ## AI disclosure
 

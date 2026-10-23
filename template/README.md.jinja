@@ -50,6 +50,14 @@ uv run nox                 # run every check
 
 Pass arguments through to pytest with `uv run nox -s tests-{{ python_min }} -- -k name`.
 
+### Branches
+
+`main` holds releases only. `dev` accumulates feature pull requests, which are
+squash-merged. Feature work happens on `dev-<name>` branches cut from `dev`,
+and pull requests target `dev`. On GitHub, make `dev` the default branch so
+pull requests target it, allow only squash merges into it, and protect
+`main`.
+
 ### Working with Claude Code
 
 `CLAUDE.md` is the entry point: commands, the definition of done, and how work
@@ -77,17 +85,22 @@ changes.
 
 ## Releasing
 
+From `dev`, with a clean tree and nothing on `main` that `dev` lacks:
+
 ```console
 uv run nox -s bump -- minor
 uv run nox
 git commit -am "chore(release): v$(uv version --short)"
+git switch main && git merge --ff-only dev
 git tag -a "v$(uv version --short)" -m "v$(uv version --short)"
-git push --follow-tags
+git switch dev
+git push origin dev main --follow-tags
 ```
 
 The tag is annotated because `--follow-tags` pushes only annotated tags.
-Pushing it runs `.github/workflows/release.yml`, which publishes to PyPI
-through trusted publishing.
+Pushing it runs `.github/workflows/release.yml`, which checks that the tag is
+on `main` and matches the project version, then publishes to PyPI through
+trusted publishing. `/release` runs these steps.
 {%- endif %}
 
 ## AI disclosure

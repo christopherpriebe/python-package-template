@@ -20,6 +20,14 @@ is Jinja source that Copier renders into a new project.
   "Choices baked in" sections describe `template/`; update them in the same
   change as the template.
 
+## Branches
+
+`main` holds released template versions only; tag them `v*` so projects can
+`copier update` to a known state. `dev` accumulates squash-merged pull
+requests. Template work happens on `dev-<slug>` branches cut from `dev`, and
+pull requests target `dev`. A release is `dev` fast-forwarded into `main`
+plus an annotated tag. Never commit to `main` or `dev` directly.
+
 ## Testing changes
 
     uvx nox                        # both variants, every default session
